@@ -27,12 +27,7 @@ import (
 	"github.com/konveyor/move2kube/internal/starlark/gettransformdata"
 	"github.com/konveyor/move2kube/internal/starlark/runtransforms"
 	"github.com/konveyor/move2kube/internal/transformer/transformations"
-	log "github.com/sirupsen/logrus" // TODO
 )
-
-// var (
-// 	answers = map[string]interface{}{}
-// )
 
 func TestGettingAndTransformingResources(t *testing.T) {
 	relBaseDir := "testdata"
@@ -78,8 +73,6 @@ func TestGettingAndTransformingResources(t *testing.T) {
 }
 
 func transformAll(transformsPaths []string, k8sResourcesPath, outputPath string) ([]string, error) {
-	log.Trace("start TransformAll")
-	defer log.Trace("end TransformAll")
 	transforms, err := transformations.GetTransformsFromPathsUsingDefaults(transformsPaths)
 	if err != nil {
 		return nil, err
@@ -94,42 +87,3 @@ func transformAll(transformsPaths []string, k8sResourcesPath, outputPath string)
 	}
 	return starlark.WriteResources(transformedK8sResources, outputPath)
 }
-
-// func myDynamicAskQuestion(questionObjI interface{}) (interface{}, error) {
-// 	log.Trace("start myDynamicAskQuestion")
-// 	defer log.Trace("end myDynamicAskQuestion")
-// 	questionObj, ok := questionObjI.(types.MapT)
-// 	if !ok {
-// 		return nil, fmt.Errorf("Excpted questions to be of map type. Actual value is %+v of type %T", questionObjI, questionObjI)
-// 	}
-// 	qakeyI, ok := questionObj["key"]
-// 	if !ok {
-// 		return nil, fmt.Errorf("The key 'key' is missing from the question object %+v", questionObj)
-// 	}
-// 	qakey, ok := qakeyI.(string)
-// 	if !ok {
-// 		return nil, fmt.Errorf("The key 'key' is not a string. The question object %+v", questionObj)
-// 	}
-// 	descI, ok := questionObj["description"]
-// 	if !ok {
-// 		return nil, fmt.Errorf("The key 'description' is missing from the question object %+v", questionObj)
-// 	}
-// 	desc, ok := descI.(string)
-// 	if !ok {
-// 		return nil, fmt.Errorf("The key 'description' is not a string. The question object %+v", questionObj)
-// 	}
-// 	defaultAnswer := ""
-// 	defaultAnswerI, ok := questionObj["default"]
-// 	if ok {
-// 		newDefaultAnswer, ok := defaultAnswerI.(string)
-// 		if !ok {
-// 			return nil, fmt.Errorf("The key 'default' is not a string. The question object %+v", questionObj)
-// 		}
-// 		defaultAnswer = newDefaultAnswer
-// 	}
-// 	hints := []string{}
-// 	log.Debugf("key %+v desc %+v hints %+v default %+v", qakey, desc, hints, defaultAnswer)
-// 	answer := fmt.Sprintf("dynamic question: [%s]", qakey)
-// 	answers[qakey] = answer
-// 	return answer, nil
-// }

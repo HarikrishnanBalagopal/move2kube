@@ -257,6 +257,74 @@ func ReadMove2KubeYaml(path string, out interface{}) error {
 	return nil
 }
 
+// ReadMove2KubeYamlStrict is like ReadMove2KubeYaml but returns an error
+// when it finds unknown fields in the yaml
+func ReadMove2KubeYamlStrict(path string, out interface{}, kind string) error {
+	yamlData, err := ioutil.ReadFile(path)
+	if err != nil {
+		log.Debugf("Failed to read the yaml file at path %s Error: %q", path, err)
+		return err
+	}
+	yamlMap := map[string]interface{}{}
+	if err := yaml.Unmarshal([]byte(yamlData), yamlMap); err != nil {
+		log.Debugf("Error occurred while unmarshalling yaml file at path %s Error: %q", path, err)
+		return err
+	}
+	groupVersionI, ok := yamlMap["apiVersion"]
+	if !ok {
+		err := fmt.Errorf("did not find apiVersion in the yaml file at path %s", path)
+		log.Debug(err)
+		return err
+	}
+	groupVersionStr, ok := groupVersionI.(string)
+	if !ok {
+		err := fmt.Errorf("the apiVersion is not a string in the yaml file at path %s", path)
+		log.Debug(err)
+		return err
+	}
+	groupVersion, err := schema.ParseGroupVersion(groupVersionStr)
+	if err != nil {
+		log.Debugf("Failed to parse the apiVersion %s Error: %q", groupVersionStr, err)
+		return err
+	}
+	if groupVersion.Group != types.SchemeGroupVersion.Group {
+		err := fmt.Errorf("the file at path %s doesn't have the correct group. Expected group %s Actual group %s", path, types.SchemeGroupVersion.Group, groupVersion.Group)
+		log.Debug(err)
+		return err
+	}
+	if groupVersion.Version != types.SchemeGroupVersion.Version {
+		log.Warnf("The file at path %s was generated using a different version. File version is %s and move2kube version is %s", path, groupVersion.Version, types.SchemeGroupVersion.Version)
+	}
+	actualKindI, ok := yamlMap["kind"]
+	if !ok {
+		err := fmt.Errorf("the file at path %s does not have a kind specified", path)
+		log.Debug(err)
+		return err
+	}
+	actualKind, ok := actualKindI.(string)
+	if !ok {
+		err := fmt.Errorf("the kind is not a string in the yaml file at path %s", path)
+		log.Debug(err)
+		return err
+	}
+	if kind != "" && actualKind != kind {
+		err := fmt.Errorf("the file at path %s does not have the expected kind. Expected: %s Actual: %s", path, kind, actualKind)
+		log.Debug(err)
+		return err
+	}
+	jsonBytes, err := json.Marshal(yamlMap)
+	if err != nil {
+		return err
+	}
+	dec := json.NewDecoder(bytes.NewReader(jsonBytes))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(out); err != nil {
+		log.Debugf("Error occurred while unmarshalling yaml file at path %s Error: %q", path, err)
+		return err
+	}
+	return nil
+}
+
 // WriteJSON writes an json to disk
 func WriteJSON(outputPath string, data interface{}) error {
 	var b bytes.Buffer
@@ -304,7 +372,7 @@ func NormalizeForFilename(name string) string {
 // NormalizeForServiceName converts the string to be compatible for service name
 func NormalizeForServiceName(svcName string) string {
 	re := regexp.MustCompile("[._]")
-	newName := strings.ToLower(re.ReplaceAllString(svcName, "-"))
+	newName := strings.ToLower(re.ReplaceAllLiteralString(svcName, "-"))
 	if newName != svcName {
 		log.Infof("Changing service name to %s from %s", svcName, newName)
 	}
@@ -384,7 +452,7 @@ func WriteTemplateToFile(tpl string, config interface{}, writepath string, filem
 func GetClosestMatchingString(options []string, searchstring string) string {
 	// tokenize all strings
 	reg := regexp.MustCompile("[^a-zA-Z0-9]+")
-	searchstring = reg.ReplaceAllString(searchstring, "")
+	searchstring = reg.ReplaceAllLiteralString(searchstring, "")
 	searchstring = strings.ToLower(searchstring)
 
 	leastDistance := math.MaxInt32
@@ -393,7 +461,7 @@ func GetClosestMatchingString(options []string, searchstring string) string {
 	// Simply find the option with least distance
 	for _, option := range options {
 		// do tokensize the search space string too
-		tokenizedOption := reg.ReplaceAllString(option, "")
+		tokenizedOption := reg.ReplaceAllLiteralString(option, "")
 		tokenizedOption = strings.ToLower(tokenizedOption)
 
 		currDistance := smetrics.WagnerFischer(tokenizedOption, searchstring, 1, 1, 2)
@@ -430,7 +498,7 @@ func MakeFileNameCompliant(name string) string {
 	}
 	baseName := filepath.Base(name)
 	invalidChars := regexp.MustCompile("[^a-zA-Z0-9-.]+")
-	processedName := invalidChars.ReplaceAllString(baseName, "-")
+	processedName := invalidChars.ReplaceAllLiteralString(baseName, "-")
 	if len(processedName) > 63 {
 		log.Debugf("Warning: The processed name %q is longer than 63 characters long.", processedName)
 	}
@@ -451,7 +519,7 @@ func GetSHA256Hash(s string) string {
 // MakeStringDNSNameCompliant makes the string into a valid DNS name.
 func MakeStringDNSNameCompliant(s string) string {
 	name := strings.ToLower(s)
-	name = regexp.MustCompile(`[^a-z0-9-.]`).ReplaceAllString(name, "-")
+	name = regexp.MustCompile(`[^a-z0-9-.]`).ReplaceAllLiteralString(name, "-")
 	start, end := name[0], name[len(name)-1]
 	if start == '-' || start == '.' || end == '-' || end == '.' {
 		log.Debugf("The first and/or last characters of the string %q are not alphanumeric.", s)

@@ -1,0 +1,31 @@
+Deployment:
+  apps/v1:
+    nginx:
+      metadata:
+        annotations:
+          openshift.io/node-selector: type=gpu-node,region=east
+      spec:
+        template:
+          spec:
+            containers:
+              '[0]':
+                name: webcontainer
+  extensions/v1beta1:
+    javaspringapp:
+      metadata:
+        annotations:
+          openshift.io/node-selector: type=gpu-node,region=east
+common:
+  replicas: 10
+imageregistry:
+  namespace: move2kube
+  url: us.icr.io
+services:
+  javaspringapp:
+    image:
+      name: openjdk-dev8
+      tag: latest
+  nginx:
+    image:
+      name: nginx-allenvs
+      tag: latest

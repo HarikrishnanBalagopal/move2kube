@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 	"reflect"
 
 	"github.com/konveyor/move2kube/internal/common"
@@ -85,6 +86,38 @@ func GetK8sResources(k8sResourcesPath string) ([]types.K8sResourceT, error) {
 			continue
 		}
 		k8sResources = append(k8sResources, currK8sResources...)
+	}
+	return k8sResources, nil
+}
+
+// GetK8sResourcesWithPaths gets the k8s resources from a folder along
+// with the relaive paths where they were found.
+// Mutiple resources maybe specified in the same yaml file.
+func GetK8sResourcesWithPaths(k8sResourcesPath string) (map[string][]types.K8sResourceT, error) {
+	log.Trace("start GetK8sResourcesWithPaths")
+	defer log.Trace("end GetK8sResourcesWithPaths")
+	yamlPaths, err := common.GetFilesByExt(k8sResourcesPath, []string{".yaml"})
+	if err != nil {
+		return nil, err
+	}
+	k8sResources := map[string][]types.K8sResourceT{}
+	for _, yamlPath := range yamlPaths {
+		k8sYamlBytes, err := ioutil.ReadFile(yamlPath)
+		if err != nil {
+			log.Errorf("Failed to read the yaml file at path %s . Error: %q", yamlPath, err)
+			continue
+		}
+		currK8sResources, err := GetK8sResourcesFromYaml(string(k8sYamlBytes))
+		if err != nil {
+			log.Debugf("Failed to get k8s resources from the yaml file at path %s . Error: %q", yamlPath, err)
+			continue
+		}
+		relYamlPath, err := filepath.Rel(k8sResourcesPath, yamlPath)
+		if err != nil {
+			log.Errorf("failed to make the k8s yaml path %s relative to the source folder %s . Error: %q", yamlPath, k8sResourcesPath, err)
+			continue
+		}
+		k8sResources[relYamlPath] = append(k8sResources[relYamlPath], currK8sResources...)
 	}
 	return k8sResources, nil
 }
