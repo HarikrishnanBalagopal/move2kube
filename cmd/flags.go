@@ -48,6 +48,7 @@ const (
 	// customizationsFlag is the path to customizations directory
 	customizationsFlag      = "customizations"
 	qadisablecliFlag        = "qa-disable-cli"
+	allowOverlapFlag        = "allow-overlap"
 	qaportFlag              = "qa-port"
 	planProgressPortFlag    = "plan-progress-port"
 	transformerSelectorFlag = "transformer-selector"
@@ -56,6 +57,8 @@ const (
 type qaflags struct {
 	// qadisablecli disables the CLI engine. To be used with HTTP REST engine
 	qadisablecli bool
+	// allowOverlap allows the source and output directories to overlap (one is inside the other)
+	allowOverlap bool
 	// qaport contains the port where the Question Answer HTTP REST engine server is started
 	qaport int
 	// configOut contains the location to output the config

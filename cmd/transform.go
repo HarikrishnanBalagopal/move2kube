@@ -131,8 +131,12 @@ func transformHandler(cmd *cobra.Command, flags transformFlags) {
 		checkOutputPath(flags.outpath, flags.overwrite)
 		if flags.srcpath != "" && !isRemotePath {
 			checkSourcePath(flags.srcpath)
-			if flags.srcpath == flags.outpath || common.IsParent(flags.outpath, flags.srcpath) || common.IsParent(flags.srcpath, flags.outpath) {
-				logrus.Fatalf("The source path %s and output path %s overlap.", flags.srcpath, flags.outpath)
+			if flags.allowOverlap {
+				logrus.Debugf("Allowing the source and output directories to overlap. This can lead to unexpected results!")
+			} else {
+				if flags.srcpath == flags.outpath || common.IsParent(flags.outpath, flags.srcpath) || common.IsParent(flags.srcpath, flags.outpath) {
+					logrus.Fatalf("The source path %s and output path %s overlap.", flags.srcpath, flags.outpath)
+				}
 			}
 		}
 		if err := os.MkdirAll(flags.outpath, common.DefaultDirectoryPermission); err != nil {
@@ -235,9 +239,11 @@ func GetTransformCommand() *cobra.Command {
 
 	// Hidden options
 	transformCmd.Flags().BoolVar(&flags.qadisablecli, qadisablecliFlag, false, "Enable/disable the QA Cli sub-system. Without this system, you will have to use the REST API to interact.")
+	transformCmd.Flags().BoolVar(&flags.allowOverlap, allowOverlapFlag, false, "Allow the source and output directories to overlap (one is inside the other)")
 	transformCmd.Flags().IntVar(&flags.qaport, qaportFlag, 0, "Port for the QA service. By default it chooses a random free port.")
 
 	must(transformCmd.Flags().MarkHidden(qadisablecliFlag))
+	must(transformCmd.Flags().MarkHidden(allowOverlapFlag))
 	must(transformCmd.Flags().MarkHidden(qaportFlag))
 
 	return transformCmd
